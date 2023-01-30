@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 #Round Robin Password Spraying
 #ruby script and poc by Alton Johnson
-#python by Connor Brewer
+#original python by Connor Brewer
+#updated round robin, observation window, and threshold functions by joefizz
  
 from smb.SMBConnection import *
 import sys
