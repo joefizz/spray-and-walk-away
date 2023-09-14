@@ -138,7 +138,6 @@ def pwd_spray(usernames: list[str], passwords, ips, domain, window, threshold, o
 				sys.stdout.write("\r Forced Resume @ "+dt_string+"            \n")
 				continue
 			sys.stdout.write("\rResuming                                     \n")
-			time.sleep(window * 60)
 			pass_counter = 0
 
 
